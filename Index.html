@@ -1,0 +1,1634 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Meine Handschrift → GoodNotes</title>
+  <style>
+    :root {
+      --bg: #f4f6f9;
+      --card: #ffffff;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --primary-light: #eff6ff;
+      --success: #16a34a;
+      --danger: #dc2626;
+      --radius: 14px;
+      --shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+    }
+
+    header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 20px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .header-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand h1 {
+      font-size: 1.15rem;
+      margin: 0;
+      font-weight: 700;
+    }
+
+    .badge {
+      background: var(--primary-light);
+      color: var(--primary);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 3px 9px;
+      border-radius: 999px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      background: var(--bg);
+      padding: 4px;
+      border-radius: 10px;
+    }
+
+    .tab-btn {
+      border: none;
+      background: transparent;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      transition: 0.15s;
+    }
+
+    .tab-btn.active {
+      background: var(--card);
+      color: var(--text);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+
+    main {
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 0 16px 40px;
+    }
+
+    .view {
+      display: none;
+    }
+    .view.active {
+      display: block;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    /* Progress bar */
+    .progress-wrap {
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .progress-bar-bg {
+      flex: 1;
+      min-width: 200px;
+      height: 10px;
+      background: var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--success);
+      transition: width 0.25s ease;
+    }
+
+    /* Draw Workspace */
+    .draw-layout {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    @media (max-width: 860px) {
+      .draw-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .pad-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .current-char-label {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+    }
+
+    .current-char-big {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--primary);
+      line-height: 1;
+    }
+
+    .canvas-container {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      background: #ffffff;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    canvas#drawCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none;
+      cursor: crosshair;
+    }
+
+    .pad-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 9px 14px;
+      border-radius: 9px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.15s;
+    }
+
+    .btn:hover {
+      background: #f8fafc;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-success {
+      background: var(--success);
+      border-color: var(--success);
+      color: #fff;
+    }
+
+    .btn-danger {
+      color: var(--danger);
+    }
+
+    .btn-sm {
+      padding: 6px 10px;
+      font-size: 0.8rem;
+    }
+
+    .toggle-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .toggle-row label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+
+    /* Character Grid */
+    .filter-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+
+    .pill {
+      border: 1px solid var(--border);
+      background: var(--bg);
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--muted);
+    }
+
+    .pill.active {
+      background: var(--text);
+      color: #fff;
+      border-color: var(--text);
+    }
+
+    .char-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+      gap: 8px;
+    }
+
+    .char-tile {
+      aspect-ratio: 1 / 1.05;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px;
+      cursor: pointer;
+      position: relative;
+      transition: 0.12s;
+    }
+
+    .char-tile:hover {
+      border-color: var(--primary);
+    }
+
+    .char-tile.active {
+      border-color: var(--primary);
+      background: var(--primary-light);
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+    }
+
+    .char-tile.done {
+      border-color: #bbf7d0;
+      background: #f0fdf4;
+    }
+
+    .char-tile.done.active {
+      border-color: var(--primary);
+      background: var(--primary-light);
+    }
+
+    .char-tile-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--muted);
+      align-self: flex-start;
+      padding-left: 2px;
+    }
+
+    .char-tile canvas {
+      width: 36px;
+      height: 36px;
+    }
+
+    /* Converter Workspace */
+    .convert-layout {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    @media (max-width: 940px) {
+      .convert-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    textarea#textInput {
+      width: 100%;
+      min-height: 180px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      resize: vertical;
+      margin-bottom: 12px;
+    }
+
+    .control-group {
+      margin-bottom: 14px;
+    }
+
+    .control-group label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.84rem;
+      font-weight: 600;
+      margin-bottom: 5px;
+      color: var(--text);
+    }
+
+    .control-group input[type="range"] {
+      width: 100%;
+      accent-color: var(--primary);
+    }
+
+    .control-row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    select {
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #fff;
+      font-size: 0.88rem;
+    }
+
+    .color-swatches {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .swatch {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      cursor: pointer;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.15);
+    }
+
+    .swatch.active {
+      border-color: var(--primary);
+      transform: scale(1.12);
+    }
+
+    .missing-alert {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      color: #92400e;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 0.83rem;
+      margin-bottom: 12px;
+      display: none;
+    }
+
+    .export-box {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+    }
+
+    .goodnotes-tip {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 12px;
+    }
+
+    .goodnotes-tip strong {
+      color: var(--text);
+    }
+
+    /* Preview area */
+    .preview-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .pages-container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      align-items: center;
+    }
+
+    .page-wrapper {
+      width: 100%;
+      max-width: 650px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.08);
+      overflow: hidden;
+    }
+
+    .page-wrapper.checkerboard {
+      background-image:
+        linear-gradient(45deg, #f1f5f9 25%, transparent 25%),
+        linear-gradient(-45deg, #f1f5f9 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #f1f5f9 75%),
+        linear-gradient(-45deg, transparent 75%, #f1f5f9 75%);
+      background-size: 20px 20px;
+      background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+    }
+
+    .page-wrapper canvas {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: #0f172a;
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 999px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      opacity: 0;
+      transition: 0.25s;
+      z-index: 200;
+      pointer-events: none;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="brand">
+      <h1>✍️ Eigene Handschrift → GoodNotes</h1>
+      <span class="badge">Offline & Vektor-PDF</span>
+    </div>
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="draw">1. Handschrift zeichnen</button>
+      <button class="tab-btn" data-tab="convert">2. Text umwandeln & Export</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- TAB 1: ZEICHNEN -->
+  <section id="view-draw" class="view active">
+    <div class="card progress-wrap">
+      <div>
+        <strong>Fortschritt:</strong> <span id="progressText">0 / 0 Zeichen gezeichnet</span>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progressBar"></div>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn btn-sm" id="btnExportBackup">💾 Schrift sichern (.json)</button>
+        <button class="btn btn-sm" id="btnImportBackup">📂 Schrift laden</button>
+        <input type="file" id="importFileInput" accept=".json" style="display:none" />
+      </div>
+    </div>
+
+    <div class="draw-layout">
+      <!-- Zeichenfläche -->
+      <div class="card">
+        <div class="pad-header">
+          <div class="current-char-label">
+            <span>Zeichen:</span>
+            <span class="current-char-big" id="currentCharLabel">a</span>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <button class="btn btn-sm" id="btnPrevChar">← Zurück</button>
+            <button class="btn btn-sm btn-primary" id="btnNextChar">Weiter →</button>
+          </div>
+        </div>
+
+        <div class="canvas-container">
+          <canvas id="drawCanvas" width="600" height="600"></canvas>
+        </div>
+
+        <div class="pad-controls">
+          <button class="btn" id="btnUndo">↩ Rückgängig</button>
+          <button class="btn btn-danger" id="btnClear">🗑 Löschen</button>
+          <button class="btn btn-success" id="btnNextMissing" style="margin-left:auto;">Nächstes fehlendes →</button>
+        </div>
+
+        <div class="toggle-row">
+          <label>
+            <input type="checkbox" id="chkGhost" checked />
+            Vorlage anzeigen
+          </label>
+          <label>
+            <input type="checkbox" id="chkPenOnly" />
+            Nur Apple Pencil / Stift
+          </label>
+          <label style="width:100%; justify-content:space-between;">
+            <span>Strichstärke beim Zeichnen:</span>
+            <input type="range" id="drawStrokeWidth" min="3" max="16" value="7" style="width:120px;">
+          </label>
+        </div>
+      </div>
+
+      <!-- Zeichenübersicht -->
+      <div class="card">
+        <div class="filter-pills" id="filterPills">
+          <button class="pill active" data-filter="all">Alle</button>
+          <button class="pill" data-filter="lower">Kleinbuchstaben (a–z, äöüß)</button>
+          <button class="pill" data-filter="upper">Großbuchstaben (A–Z, ÄÖÜ)</button>
+          <button class="pill" data-filter="digits">Zahlen (0–9)</button>
+          <button class="pill" data-filter="punct">Satzzeichen</button>
+          <button class="pill" data-filter="textMissing">Fehlend aus meinem Text</button>
+        </div>
+        <div class="char-grid" id="charGrid"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAB 2: TEXT KONVERTIEREN & GOODNOTES EXPORT -->
+  <section id="view-convert" class="view">
+    <div class="convert-layout">
+      <!-- Einstellungen -->
+      <div class="card">
+        <label for="textInput" style="font-weight:700; display:block; margin-bottom:6px;">Dein Text:</label>
+        <textarea id="textInput" placeholder="Schreibe oder füge hier deinen Text ein...">Hallo GoodNotes!
+Das ist meine eigene Handschrift.
+Auch Zahlen wie 1234567890 und Umlaute wie ä, ö, ü, ß funktionieren.</textarea>
+
+        <div class="missing-alert" id="missingAlert">
+          <strong>Noch nicht gezeichnet:</strong> <span id="missingCharsList"></span><br />
+          <button class="btn btn-sm" id="btnJumpToMissing" style="margin-top:6px;">Fehlende Zeichen jetzt zeichnen →</button>
+        </div>
+
+        <div class="control-row-2 control-group">
+          <div>
+            <label>Papierstil (GoodNotes)</label>
+            <select id="paperStyle">
+              <option value="lined">Liniert (auf Grundlinie)</option>
+              <option value="grid">Kariert (5 mm)</option>
+              <option value="dotted">Gepunktet (Dot Grid)</option>
+              <option value="blank">Blanko (Weiß)</option>
+              <option value="cream">Elfenbein / Creme</option>
+              <option value="transparent">Transparent (für PNG-Sticker)</option>
+            </select>
+          </div>
+          <div>
+            <label>Stift-Variation</label>
+            <select id="humanizeLevel">
+              <option value="0.5">Natürlich (Empfohlen)</option>
+              <option value="1">Stark / Lebendig</option>
+              <option value="0">Exakt (keine Variation)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label><span>Schriftgröße</span><span id="valFontSize">34 px</span></label>
+          <input type="range" id="fontSize" min="18" max="68" value="34" />
+        </div>
+
+        <div class="control-group">
+          <label><span>Zeilenabstand</span><span id="valLineHeight">1.45×</span></label>
+          <input type="range" id="lineHeight" min="1.0" max="2.4" step="0.05" value="1.45" />
+        </div>
+
+        <div class="control-group">
+          <label><span>Zeichenabstand</span><span id="valLetterSpacing">2 px</span></label>
+          <input type="range" id="letterSpacing" min="-4" max="14" step="0.5" value="2" />
+        </div>
+
+        <div class="control-group">
+          <label><span>Strichstärke</span><span id="valStrokeScale">1.0×</span></label>
+          <input type="range" id="strokeScale" min="0.4" max="2.2" step="0.1" value="1.0" />
+        </div>
+
+        <div class="control-group">
+          <label>Tintenfarbe</label>
+          <div class="color-swatches" id="colorSwatches">
+            <div class="swatch active" data-color="#1e293b" style="background:#1e293b;" title="Schwarz/Anthrazit"></div>
+            <div class="swatch" data-color="#1d4ed8" style="background:#1d4ed8;" title="Kugelschreiber Blau"></div>
+            <div class="swatch" data-color="#0f3d7a" style="background:#0f3d7a;" title="Füller Dunkelblau"></div>
+            <div class="swatch" data-color="#b91c1c" style="background:#b91c1c;" title="Rot"></div>
+            <div class="swatch" data-color="#15803d" style="background:#15803d;" title="Grün"></div>
+            <input type="color" id="customColor" value="#1e293b" style="width:32px; height:28px; border:none; background:none; cursor:pointer;" />
+          </div>
+        </div>
+
+        <div class="export-box">
+          <button class="btn btn-primary" id="btnSharePDF">📤 In GoodNotes öffnen (Vektor-PDF)</button>
+          <button class="btn" id="btnDownloadPDF">📄 Vektor-PDF herunterladen</button>
+          <div class="control-row-2">
+            <button class="btn" id="btnCopyPNG">📋 PNG kopieren</button>
+            <button class="btn" id="btnDownloadPNG">🖼 PNG laden</button>
+          </div>
+        </div>
+
+        <div class="goodnotes-tip">
+          <strong>So öffnest du es in GoodNotes:</strong><br />
+          • <strong>Als Dokument/Seite:</strong> Tippe auf <em>„In GoodNotes öffnen (Vektor-PDF)“</em> und wähle im Teilen-Menü <strong>GoodNotes</strong>.<br />
+          • <strong>Auf bestehender Seite:</strong> Stelle Papier auf <em>Transparent</em>, tippe auf <em>„PNG kopieren“</em> und füge es in GoodNotes per <em>Einsetzen</em> ein.
+        </div>
+      </div>
+
+      <!-- Vorschau -->
+      <div class="card">
+        <div class="preview-header">
+          <strong>Vorschau (<span id="pageCountLabel">1 Seite</span>, DIN A4)</strong>
+          <span style="font-size:0.82rem; color:var(--muted);">Zoomen in GoodNotes bleibt durch Vektor-PDF gestochen scharf</span>
+        </div>
+        <div class="pages-container" id="pagesContainer"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  // === 1. ZEICHENSATZ DEFINITION ===
+  const SETS = {
+    lower: "abcdefghijklmnopqrstuvwxyzäöüß".split(""),
+    upper: "ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜ".split(""),
+    digits: "0123456789".split(""),
+    punct: [".", ",", "!", "?", ":", ";", "-", "(", ")", "\"", "'", "+", "=", "/"]
+  };
+  const ALL_CHARS = [...SETS.lower, ...SETS.upper, ...SETS.digits, ...SETS.punct];
+
+  // Hilfslinien-Positionen (normalisiert 0..1 auf dem Zeichen-Canvas)
+  const GUIDES = {
+    ascender: 0.16,
+    xHeight: 0.40,
+    baseline: 0.72,
+    descender: 0.90
+  };
+
+  const STORAGE_KEY = "my_handwriting_goodnotes_v1";
+
+  // State
+  let glyphs = loadGlyphs(); // { char: { strokes: [ [ {x,y,p} ] ], minX, maxX } }
+  let currentChar = "a";
+  let currentFilter = "all";
+  let activeColor = "#1e293b";
+  let renderedPagesData = []; // Für Vektor-PDF Export
+
+  // DOM Elements
+  const drawCanvas = document.getElementById("drawCanvas");
+  const drawCtx = drawCanvas.getContext("2d");
+  const charGrid = document.getElementById("charGrid");
+  const currentCharLabel = document.getElementById("currentCharLabel");
+  const progressText = document.getElementById("progressText");
+  const progressBar = document.getElementById("progressBar");
+  const chkGhost = document.getElementById("chkGhost");
+  const chkPenOnly = document.getElementById("chkPenOnly");
+  const drawStrokeWidth = document.getElementById("drawStrokeWidth");
+
+  const textInput = document.getElementById("textInput");
+  const paperStyle = document.getElementById("paperStyle");
+  const humanizeLevel = document.getElementById("humanizeLevel");
+  const fontSizeInput = document.getElementById("fontSize");
+  const lineHeightInput = document.getElementById("lineHeight");
+  const letterSpacingInput = document.getElementById("letterSpacing");
+  const strokeScaleInput = document.getElementById("strokeScale");
+  const pagesContainer = document.getElementById("pagesContainer");
+  const pageCountLabel = document.getElementById("pageCountLabel");
+  const missingAlert = document.getElementById("missingAlert");
+  const missingCharsList = document.getElementById("missingCharsList");
+
+  // === 2. SPEICHERUNG ===
+  function loadGlyphs() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function saveGlyphs() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(glyphs));
+    } catch (e) {
+      console.warn("Speichern fehlgeschlagen:", e);
+    }
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.classList.remove("show"), 2600);
+  }
+
+  // === 3. TABS ===
+  document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById("view-" + btn.dataset.tab).classList.add("active");
+      if (btn.dataset.tab === "convert") {
+        renderTextPreview();
+      } else {
+        renderGrid();
+        renderDrawCanvas();
+      }
+    });
+  });
+
+  // === 4. ZEICHNEN-LOGIK ===
+  let isDrawing = false;
+  let activePointerId = null;
+  let currentStroke = [];
+
+  function computeBounds(strokes) {
+    let minX = 1, maxX = 0;
+    for (const s of strokes) {
+      for (const pt of s) {
+        if (pt.x < minX) minX = pt.x;
+        if (pt.x > maxX) maxX = pt.x;
+      }
+    }
+    if (minX > maxX) return { minX: 0.35, maxX: 0.65 };
+    return { minX, maxX };
+  }
+
+  function ensureGlyph(ch) {
+    if (!glyphs[ch]) {
+      glyphs[ch] = { strokes: [], minX: 0.35, maxX: 0.65 };
+    }
+    return glyphs[ch];
+  }
+
+  function getCanvasPoint(e) {
+    const rect = drawCanvas.getBoundingClientRect();
+    const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+    const p = (e.pressure && e.pressure > 0) ? e.pressure : 0.5;
+    return { x, y, p };
+  }
+
+  drawCanvas.addEventListener("pointerdown", (e) => {
+    if (chkPenOnly.checked && e.pointerType !== "pen") return;
+    if (isDrawing) return;
+    e.preventDefault();
+    drawCanvas.setPointerCapture(e.pointerId);
+    isDrawing = true;
+    activePointerId = e.pointerId;
+    currentStroke = [getCanvasPoint(e)];
+    renderDrawCanvas();
+  });
+
+  drawCanvas.addEventListener("pointermove", (e) => {
+    if (!isDrawing || e.pointerId !== activePointerId) return;
+    e.preventDefault();
+    const pt = getCanvasPoint(e);
+    const prev = currentStroke[currentStroke.length - 1];
+    const dist = Math.hypot(pt.x - prev.x, pt.y - prev.y);
+    if (dist > 0.004) {
+      currentStroke.push(pt);
+      renderDrawCanvas();
+    }
+  });
+
+  function finishStroke(e) {
+    if (!isDrawing || e.pointerId !== activePointerId) return;
+    isDrawing = false;
+    activePointerId = null;
+    if (currentStroke.length > 0) {
+      const g = ensureGlyph(currentChar);
+      g.strokes.push(currentStroke);
+      const b = computeBounds(g.strokes);
+      g.minX = b.minX;
+      g.maxX = b.maxX;
+      currentStroke = [];
+      saveGlyphs();
+      renderDrawCanvas();
+      updateSingleTile(currentChar);
+      updateProgress();
+    }
+  }
+
+  drawCanvas.addEventListener("pointerup", finishStroke);
+  drawCanvas.addEventListener("pointercancel", finishStroke);
+
+  function drawSmoothStroke(ctx, pts, widthPx, color, scaleX = 1, scaleY = 1, offsetX = 0, offsetY = 0) {
+    if (!pts.length) return;
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = widthPx;
+
+    if (pts.length === 1) {
+      ctx.beginPath();
+      ctx.arc(offsetX + pts[0].x * scaleX, offsetY + pts[0].y * scaleY, widthPx / 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      return;
+    }
+
+    ctx.beginPath();
+    ctx.moveTo(offsetX + pts[0].x * scaleX, offsetY + pts[0].y * scaleY);
+    if (pts.length === 2) {
+      ctx.lineTo(offsetX + pts[1].x * scaleX, offsetY + pts[1].y * scaleY);
+    } else {
+      for (let i = 1; i < pts.length - 1; i++) {
+        const midX = (pts[i].x + pts[i + 1].x) / 2;
+        const midY = (pts[i].y + pts[i + 1].y) / 2;
+        ctx.quadraticCurveTo(
+          offsetX + pts[i].x * scaleX,
+          offsetY + pts[i].y * scaleY,
+          offsetX + midX * scaleX,
+          offsetY + midY * scaleY
+        );
+      }
+      const last = pts[pts.length - 1];
+      ctx.lineTo(offsetX + last.x * scaleX, offsetY + last.y * scaleY);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function renderDrawCanvas() {
+    const W = drawCanvas.width;
+    const H = drawCanvas.height;
+    drawCtx.clearRect(0, 0, W, H);
+
+    // Hilfslinien
+    const drawGuide = (yNorm, color, dashed, label) => {
+      const y = yNorm * H;
+      drawCtx.save();
+      drawCtx.strokeStyle = color;
+      drawCtx.lineWidth = yNorm === GUIDES.baseline ? 2 : 1.5;
+      if (dashed) drawCtx.setLineDash([8, 6]);
+      drawCtx.beginPath();
+      drawCtx.moveTo(0, y);
+      drawCtx.lineTo(W, y);
+      drawCtx.stroke();
+      drawCtx.fillStyle = color;
+      drawCtx.font = "600 18px sans-serif";
+      drawCtx.fillText(label, 12, y - 6);
+      drawCtx.restore();
+    };
+
+    drawGuide(GUIDES.ascender, "#cbd5e1", true, "Oberlänge");
+    drawGuide(GUIDES.xHeight, "#cbd5e1", true, "Mittellänge");
+    drawGuide(GUIDES.baseline, "#93c5fd", false, "Grundlinie");
+    drawGuide(GUIDES.descender, "#e2e8f0", true, "Unterlänge");
+
+    // Ghost-Vorlage
+    if (chkGhost.checked) {
+      drawCtx.save();
+      drawCtx.fillStyle = "rgba(148, 163, 184, 0.25)";
+      drawCtx.font = `${H * 0.54}px Georgia, "Times New Roman", serif`;
+      drawCtx.textAlign = "center";
+      drawCtx.textBaseline = "alphabetic";
+      drawCtx.fillText(currentChar, W / 2, GUIDES.baseline * H);
+      drawCtx.restore();
+    }
+
+    // Gespeicherte Striche
+    const lw = Number(drawStrokeWidth.value) * 1.8;
+    const g = glyphs[currentChar];
+    if (g && g.strokes) {
+      for (const s of g.strokes) {
+        drawSmoothStroke(drawCtx, s, lw, "#0f172a", W, H);
+      }
+    }
+    // Aktueller Strich
+    if (currentStroke.length) {
+      drawSmoothStroke(drawCtx, currentStroke, lw, "#2563eb", W, H);
+    }
+  }
+
+  // Controls beim Zeichnen
+  chkGhost.addEventListener("change", renderDrawCanvas);
+  drawStrokeWidth.addEventListener("input", renderDrawCanvas);
+
+  document.getElementById("btnUndo").addEventListener("click", () => {
+    const g = glyphs[currentChar];
+    if (g && g.strokes.length > 0) {
+      g.strokes.pop();
+      if (g.strokes.length === 0) {
+        delete glyphs[currentChar];
+      } else {
+        const b = computeBounds(g.strokes);
+        g.minX = b.minX;
+        g.maxX = b.maxX;
+      }
+      saveGlyphs();
+      renderDrawCanvas();
+      updateSingleTile(currentChar);
+      updateProgress();
+    }
+  });
+
+  document.getElementById("btnClear").addEventListener("click", () => {
+    delete glyphs[currentChar];
+    saveGlyphs();
+    renderDrawCanvas();
+    updateSingleTile(currentChar);
+    updateProgress();
+  });
+
+  function selectChar(ch) {
+    currentChar = ch;
+    currentCharLabel.textContent = ch;
+    document.querySelectorAll(".char-tile").forEach(t => {
+      t.classList.toggle("active", t.dataset.char === ch);
+    });
+    renderDrawCanvas();
+  }
+
+  function getFilteredChars() {
+    if (currentFilter === "all") return ALL_CHARS;
+    if (currentFilter === "textMissing") {
+      const needed = getMissingCharsFromText();
+      return needed.length ? needed : ALL_CHARS;
+    }
+    return SETS[currentFilter] || ALL_CHARS;
+  }
+
+  document.getElementById("btnPrevChar").addEventListener("click", () => {
+    const list = getFilteredChars();
+    const idx = list.indexOf(currentChar);
+    const prev = idx > 0 ? list[idx - 1] : list[list.length - 1];
+    selectChar(prev);
+  });
+
+  document.getElementById("btnNextChar").addEventListener("click", () => {
+    const list = getFilteredChars();
+    const idx = list.indexOf(currentChar);
+    const next = (idx >= 0 && idx < list.length - 1) ? list[idx + 1] : list[0];
+    selectChar(next);
+  });
+
+  document.getElementById("btnNextMissing").addEventListener("click", () => {
+    const list = getFilteredChars();
+    const idx = list.indexOf(currentChar);
+    const ordered = [...list.slice(idx + 1), ...list.slice(0, idx + 1)];
+    const missing = ordered.find(c => !glyphs[c] || glyphs[c].strokes.length === 0);
+    if (missing) {
+      selectChar(missing);
+    } else {
+      showToast("Alle Zeichen in dieser Ansicht sind bereits fertig! 🎉");
+    }
+  });
+
+  // Filter Pills
+  document.getElementById("filterPills").addEventListener("click", (e) => {
+    const pill = e.target.closest(".pill");
+    if (!pill) return;
+    document.querySelectorAll(".pill").forEach(p => p.classList.remove("active"));
+    pill.classList.add("active");
+    currentFilter = pill.dataset.filter;
+    renderGrid();
+    const list = getFilteredChars();
+    if (!list.includes(currentChar) && list.length) {
+      selectChar(list[0]);
+    }
+  });
+
+  function renderGrid() {
+    charGrid.innerHTML = "";
+    const list = getFilteredChars();
+    for (const ch of list) {
+      const tile = document.createElement("div");
+      tile.className = "char-tile";
+      tile.dataset.char = ch;
+      if (ch === currentChar) tile.classList.add("active");
+      if (glyphs[ch] && glyphs[ch].strokes.length > 0) tile.classList.add("done");
+
+      const lbl = document.createElement("span");
+      lbl.className = "char-tile-label";
+      lbl.textContent = ch;
+
+      const c = document.createElement("canvas");
+      c.width = 72;
+      c.height = 72;
+      tile.appendChild(lbl);
+      tile.appendChild(c);
+      tile.addEventListener("click", () => selectChar(ch));
+      charGrid.appendChild(tile);
+      drawTilePreview(c, ch);
+    }
+  }
+
+  function drawTilePreview(canvas, ch) {
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const g = glyphs[ch];
+    if (g && g.strokes.length > 0) {
+      for (const s of g.strokes) {
+        drawSmoothStroke(ctx, s, 3.2, "#0f172a", canvas.width, canvas.height);
+      }
+    }
+  }
+
+  function updateSingleTile(ch) {
+    const tile = charGrid.querySelector(`.char-tile[data-char="${CSS.escape(ch)}"]`);
+    if (!tile) return;
+    const hasStrokes = glyphs[ch] && glyphs[ch].strokes.length > 0;
+    tile.classList.toggle("done", !!hasStrokes);
+    drawTilePreview(tile.querySelector("canvas"), ch);
+  }
+
+  function updateProgress() {
+    const done = ALL_CHARS.filter(c => glyphs[c] && glyphs[c].strokes.length > 0).length;
+    progressText.textContent = `${done} / ${ALL_CHARS.length} Zeichen gezeichnet`;
+    progressBar.style.width = `${Math.round((done / ALL_CHARS.length) * 100)}%`;
+  }
+
+  // Backup Export / Import
+  document.getElementById("btnExportBackup").addEventListener("click", () => {
+    const blob = new Blob([JSON.stringify(glyphs, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "meine-handschrift.json";
+    a.click();
+    showToast("Handschrift als JSON gesichert!");
+  });
+
+  document.getElementById("btnImportBackup").addEventListener("click", () => {
+    document.getElementById("importFileInput").click();
+  });
+
+  document.getElementById("importFileInput").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result);
+        glyphs = parsed;
+        saveGlyphs();
+        renderGrid();
+        renderDrawCanvas();
+        updateProgress();
+        showToast("Handschrift erfolgreich geladen!");
+      } catch {
+        showToast("Fehler: Ungültige Datei.");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  });
+
+  // === 5. TEXT-TO-HANDWRITING LAYOUT ENGINE ===
+  // Deterministischer Pseudo-Zufallsgenerator, damit die Vorschau beim Tippen nicht flackert
+  function seededRandom(seed) {
+    let x = Math.sin(seed * 12.9898 + 78.233) * 43758.5453;
+    return x - Math.floor(x);
+  }
+
+  function getMissingCharsFromText() {
+    const txt = textInput.value || "";
+    const missing = new Set();
+    for (const ch of txt) {
+      if (ch === " " || ch === "\n" || ch === "\r" || ch === "\t") continue;
+      if (!glyphs[ch] || glyphs[ch].strokes.length === 0) {
+        missing.add(ch);
+      }
+    }
+    return [...missing];
+  }
+
+  // A4 Punkt-Koordinaten: 595.28 x 841.89 pt
+  const PDF_W = 595.28;
+  const PDF_H = 841.89;
+
+  function computeLayoutPages() {
+    const txt = textInput.value || "";
+    const fontSize = Number(fontSizeInput.value); // entspricht grob der Box-Höhe eines Buchstabens in pt
+    const lineFactor = Number(lineHeightInput.value);
+    const letterSpacing = Number(letterSpacingInput.value);
+    const strokeScale = Number(strokeScaleInput.value);
+    const humanize = Number(humanizeLevel.value);
+
+    const marginX = 46;
+    const marginTop = 58;
+    const marginBottom = 52;
+    const maxLineWidth = PDF_W - marginX * 2;
+    const lineStep = fontSize * lineFactor;
+    const spaceWidth = fontSize * 0.30;
+    const baseStrokeWidth = Math.max(0.8, (fontSize / 34) * 1.75 * strokeScale);
+
+    const pages = [];
+    let currentPage = { lines: [], strokes: [] };
+    let cursorY = marginTop + fontSize * GUIDES.baseline; // erste Grundlinie
+
+    function newPage() {
+      pages.push(currentPage);
+      currentPage = { lines: [], strokes: [] };
+      cursorY = marginTop + fontSize * GUIDES.baseline;
+    }
+
+    function measureCharAdvance(ch) {
+      if (ch === " ") return spaceWidth;
+      if (ch === "\t") return spaceWidth * 2;
+      const g = glyphs[ch];
+      if (!g || !g.strokes.length) return fontSize * 0.42 + letterSpacing;
+      const wNorm = Math.max(0.10, g.maxX - g.minX);
+      return wNorm * fontSize + letterSpacing;
+    }
+
+    function measureWord(word) {
+      let w = 0;
+      for (const ch of word) w += measureCharAdvance(ch);
+      return w;
+    }
+
+    // Text in Absätze und Wörter aufteilen
+    const paragraphs = txt.replace(/\r/g, "").split("\n");
+    let charIndex = 0;
+
+    for (let pIdx = 0; pIdx < paragraphs.length; pIdx++) {
+      const para = paragraphs[pIdx];
+      // Tokenize keeping spaces
+      const tokens = para.match(/\S+|\s+/g) || [];
+      let cursorX = marginX;
+
+      for (const token of tokens) {
+        if (/^\s+$/.test(token)) {
+          for (const sp of token) {
+            cursorX += measureCharAdvance(sp);
+            charIndex++;
+          }
+          continue;
+        }
+
+        const wordW = measureWord(token);
+        if (cursorX > marginX && cursorX + wordW > marginX + maxLineWidth) {
+          cursorX = marginX;
+          cursorY += lineStep;
+          if (cursorY > PDF_H - marginBottom) newPage();
+        }
+
+        for (const ch of token) {
+          const adv = measureCharAdvance(ch);
+          if (cursorX + adv > marginX + maxLineWidth && cursorX > marginX) {
+            cursorX = marginX;
+            cursorY += lineStep;
+            if (cursorY > PDF_H - marginBottom) newPage();
+          }
+
+          const g = glyphs[ch];
+          if (g && g.strokes.length > 0) {
+            // Natürliche Variationen
+            const r1 = seededRandom(charIndex * 3 + 1) - 0.5;
+            const r2 = seededRandom(charIndex * 3 + 2) - 0.5;
+            const r3 = seededRandom(charIndex * 3 + 3) - 0.5;
+
+            const jitterX = r1 * 1.4 * humanize;
+            const jitterY = r2 * 1.8 * humanize;
+            const angle = r3 * 0.055 * humanize;
+            const scaleVar = 1 + (r1 * 0.05 * humanize);
+
+            const drawTopY = cursorY - GUIDES.baseline * fontSize * scaleVar + jitterY;
+            const drawLeftX = cursorX - g.minX * fontSize * scaleVar + jitterX;
+            const centerX = cursorX + (adv - letterSpacing) / 2;
+            const centerY = cursorY - fontSize * 0.25;
+
+            const cosA = Math.cos(angle);
+            const sinA = Math.sin(angle);
+
+            for (const s of g.strokes) {
+              const transformed = s.map(pt => {
+                const rawX = drawLeftX + pt.x * fontSize * scaleVar;
+                const rawY = drawTopY + pt.y * fontSize * scaleVar;
+                if (angle === 0) return { x: rawX, y: rawY };
+                const dx = rawX - centerX;
+                const dy = rawY - centerY;
+                return {
+                  x: centerX + dx * cosA - dy * sinA,
+                  y: centerY + dx * sinA + dy * cosA
+                };
+              });
+              currentPage.strokes.push({
+                pts: transformed,
+                width: baseStrokeWidth,
+                color: activeColor
+              });
+            }
+          } else {
+            // Fehlender Buchstabe als dezenter Platzhalter markieren
+            currentPage.strokes.push({
+              fallbackChar: ch,
+              x: cursorX,
+              y: cursorY,
+              size: fontSize * 0.6
+            });
+          }
+
+          cursorX += adv;
+          charIndex++;
+        }
+      }
+
+      // Zeilenende nach Absatz
+      currentPage.lines.push(cursorY);
+      cursorY += lineStep;
+      if (pIdx < paragraphs.length - 1 && cursorY > PDF_H - marginBottom) {
+        newPage();
+      }
+    }
+
+    pages.push(currentPage);
+    return { pages, marginTop, marginBottom, marginX, lineStep, fontSize };
+  }
+
+  function renderPageToCanvas(canvas, pageData, layoutMeta, scaleFactor = 2) {
+    canvas.width = Math.round(PDF_W * scaleFactor);
+    canvas.height = Math.round(PDF_H * scaleFactor);
+    const ctx = canvas.getContext("2d");
+    ctx.save();
+    ctx.scale(scaleFactor, scaleFactor);
+
+    const style = paperStyle.value;
+    // Hintergrund
+    if (style !== "transparent") {
+      ctx.fillStyle = style === "cream" ? "#fdfaf0" : "#ffffff";
+      ctx.fillRect(0, 0, PDF_W, PDF_H);
+    }
+
+    // Papier-Muster
+    if (style === "lined") {
+      ctx.strokeStyle = "#cbd5e1";
+      ctx.lineWidth = 0.7;
+      let y = layoutMeta.marginTop + layoutMeta.fontSize * GUIDES.baseline;
+      while (y <= PDF_H - layoutMeta.marginBottom + 10) {
+        ctx.beginPath();
+        ctx.moveTo(layoutMeta.marginX - 10, y);
+        ctx.lineTo(PDF_W - layoutMeta.marginX + 10, y);
+        ctx.stroke();
+        y += layoutMeta.lineStep;
+      }
+    } else if (style === "grid") {
+      const step = 14.17; // 5mm in pt
+      ctx.strokeStyle = "#e2e8f0";
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      for (let x = step; x < PDF_W; x += step) {
+        ctx.moveTo(x, 0); ctx.lineTo(x, PDF_H);
+      }
+      for (let y = step; y < PDF_H; y += step) {
+        ctx.moveTo(0, y); ctx.lineTo(PDF_W, y);
+      }
+      ctx.stroke();
+    } else if (style === "dotted") {
+      const step = 14.17;
+      ctx.fillStyle = "#cbd5e1";
+      for (let x = step; x < PDF_W; x += step) {
+        for (let y = step; y < PDF_H; y += step) {
+          ctx.fillRect(x - 0.6, y - 0.6, 1.2, 1.2);
+        }
+      }
+    }
+
+    // Handschrift-Striche
+    for (const item of pageData.strokes) {
+      if (item.fallbackChar) {
+        ctx.save();
+        ctx.fillStyle = "rgba(220, 38, 38, 0.35)";
+        ctx.font = `${item.size}px sans-serif`;
+        ctx.fillText(item.fallbackChar, item.x, item.y);
+        ctx.restore();
+      } else {
+        drawSmoothStroke(ctx, item.pts, item.width, item.color, 1, 1, 0, 0);
+      }
+    }
+
+    ctx.restore();
+  }
+
+  function renderTextPreview() {
+    // Update labels
+    document.getElementById("valFontSize").textContent = `${fontSizeInput.value} px`;
+    document.getElementById("valLineHeight").textContent = `${Number(lineHeightInput.value).toFixed(2)}×`;
+    document.getElementById("valLetterSpacing").textContent = `${letterSpacingInput.value} px`;
+    document.getElementById("valStrokeScale").textContent = `${Number(strokeScaleInput.value).toFixed(1)}×`;
+
+    const missing = getMissingCharsFromText();
+    if (missing.length > 0) {
+      missingAlert.style.display = "block";
+      missingCharsList.textContent = missing.join("  ");
+    } else {
+      missingAlert.style.display = "none";
+    }
+
+    const layout = computeLayoutPages();
+    renderedPagesData = layout;
+    pageCountLabel.textContent = layout.pages.length === 1 ? "1 Seite" : `${layout.pages.length} Seiten`;
+
+    pagesContainer.innerHTML = "";
+    const isTransparent = paperStyle.value === "transparent";
+    layout.pages.forEach((page) => {
+      const wrap = document.createElement("div");
+      wrap.className = "page-wrapper" + (isTransparent ? " checkerboard" : "");
+      const c = document.createElement("canvas");
+      wrap.appendChild(c);
+      pagesContainer.appendChild(wrap);
+      renderPageToCanvas(c, page, layout, 2);
+    });
+  }
+
+  // Live-Events Konverter
+  [textInput, paperStyle, humanizeLevel, fontSizeInput, lineHeightInput, letterSpacingInput, strokeScaleInput]
+    .forEach(el => el.addEventListener("input", renderTextPreview));
+
+  document.getElementById("colorSwatches").addEventListener("click", (e) => {
+    const sw = e.target.closest(".swatch");
+    if (!sw) return;
+    document.querySelectorAll(".swatch").forEach(s => s.classList.remove("active"));
+    sw.classList.add("active");
+    activeColor = sw.dataset.color;
+    document.getElementById("customColor").value = activeColor;
+    renderTextPreview();
+  });
+
+  document.getElementById("customColor").addEventListener("input", (e) => {
+    document.querySelectorAll(".swatch").forEach(s => s.classList.remove("active"));
+    activeColor = e.target.value;
+    renderTextPreview();
+  });
+
+  document.getElementById("btnJumpToMissing").addEventListener("click", () => {
+    document.querySelector('.tab-btn[data-tab="draw"]').click();
+    const pill = document.querySelector('.pill[data-filter="textMissing"]');
+    if (pill) pill.click();
+  });
+
+  // === 6. REINER VEKTOR-PDF GENERATOR (OHNE EXTERNE BIBLIOTHEKEN) ===
+  function hexToPdfRgb(hex) {
+    const clean = hex.replace("#", "");
+    const r = parseInt(clean.slice(0, 2), 16) / 255;
+    const g = parseInt(clean.slice(2, 4), 16) / 255;
+    const b = parseInt(clean.slice(4, 6), 16) / 255;
+    return `${r.toFixed(3)} ${g.toFixed(3)} ${b.toFixed(3)}`;
+  }
+
+  function buildVectorPDF(layout) {
+    const flipY = (y) => (PDF_H - y);
+    const f = (n) => n.toFixed(2);
+    const style = paperStyle.value;
+
+    const objects = []; // 1-based later
+    const addObj = (body) => {
+      objects.push(body);
+      return objects.length;
+    };
+
+    // Placeholder for Catalog (1) and Pages (2)
+    addObj(""); // 1
+    addObj(""); // 2
+
+    const pageObjIds = [];
+
+    for (const page of layout.pages) {
+      let stream = "";
+
+      // Hintergrund
+      if (style !== "transparent") {
+        stream += style === "cream" ? "0.992 0.980 0.941 rg\n" : "1 1 1 rg\n";
+        stream += `0 0 ${f(PDF_W)} ${f(PDF_H)} re f\n`;
+      }
+
+      // Papierlinien
+      if (style === "lined") {
+        stream += "0.796 0.835 0.882 RG 0.7 w\n";
+        let y = layout.marginTop + layout.fontSize * GUIDES.baseline;
+        while (y <= PDF_H - layout.marginBottom + 10) {
+          stream += `${f(layout.marginX - 10)} ${f(flipY(y))} m ${f(PDF_W - layout.marginX + 10)} ${f(flipY(y))} l S\n`;
+          y += layout.lineStep;
+        }
+      } else if (style === "grid") {
+        const step = 14.17;
+        stream += "0.886 0.910 0.941 RG 0.5 w\n";
+        for (let x = step; x < PDF_W; x += step) {
+          stream += `${f(x)} 0 m ${f(x)} ${f(PDF_H)} l S\n`;
+        }
+        for (let y = step; y < PDF_H; y += step) {
+          stream += `0 ${f(flipY(y))} m ${f(PDF_W)} ${f(flipY(y))} l S\n`;
+        }
+      } else if (style === "dotted") {
+        const step = 14.17;
+        stream += "0.796 0.835 0.882 rg\n";
+        for (let x = step; x < PDF_W; x += step) {
+          for (let y = step; y < PDF_H; y += step) {
+            stream += `${f(x - 0.6)} ${f(flipY(y) - 0.6)} 1.2 1.2 re f\n`;
+          }
+        }
+      }
+
+      // Handschrift Vektorkurven
+      stream += "1 J 1 j\n"; // runde Linienenden & -verbindungen
+      let lastColor = null;
+      let lastWidth = null;
+
+      for (const item of page.strokes) {
+        if (item.fallbackChar || !item.pts || item.pts.length === 0) continue;
+        const pts = item.pts;
+
+        if (item.color !== lastColor) {
+          stream += `${hexToPdfRgb(item.color)} RG\n`;
+          lastColor = item.color;
+        }
+        if (item.width !== lastWidth) {
+          stream += `${f(item.width)} w\n`;
+          lastWidth = item.width;
+        }
+
+        if (pts.length === 1) {
+          const p = pts[0];
+          stream += `${f(p.x - 0.05)} ${f(flipY(p.y))} m ${f(p.x + 0.05)} ${f(flipY(p.y))} l S\n`;
+        } else if (pts.length === 2) {
+          stream += `${f(pts[0].x)} ${f(flipY(pts[0].y))} m ${f(pts[1].x)} ${f(flipY(pts[1].y))} l S\n`;
+        } else {
+          let prev = pts[0];
+          stream += `${f(prev.x)} ${f(flipY(prev.y))} m\n`;
+          for (let i = 1; i < pts.length - 1; i++) {
+            const ctrl = pts[i];
+            const mid = { x: (ctrl.x + pts[i + 1].x) / 2, y: (ctrl.y + pts[i + 1].y) / 2 };
+            // Quadratische Bezier (prev, ctrl, mid) exakt in Kubische Bezier umrechnen:
+            const c1x = prev.x + (2 / 3) * (ctrl.x - prev.x);
+            const c1y = prev.y + (2 / 3) * (ctrl.y - prev.y);
+            const c2x = mid.x + (2 / 3) * (ctrl.x - mid.x);
+            const c2y = mid.y + (2 / 3) * (ctrl.y - mid.y);
+            stream += `${f(c1x)} ${f(flipY(c1y))} ${f(c2x)} ${f(flipY(c2y))} ${f(mid.x)} ${f(flipY(mid.y))} c\n`;
+            prev = mid;
+          }
+          const last = pts[pts.length - 1];
+          stream += `${f(last.x)} ${f(flipY(last.y))} l S\n`;
+        }
+      }
+
+      const contentId = addObj(`<< /Length ${stream.length} >>\nstream\n${stream}endstream`);
+      const pageId = addObj(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${f(PDF_W)} ${f(PDF_H)}] /Contents ${contentId} 0 R >>`);
+      pageObjIds.push(pageId);
+    }
+
+    objects[0] = `<< /Type /Catalog /Pages 2 0 R >>`;
+    objects[1] = `<< /Type /Pages /Kids [${pageObjIds.map(id => `${id} 0 R`).join(" ")}] /Count ${pageObjIds.length} >>`;
+
+    // PDF zusammenbauen mit exakten Byte-Offsets
+    let pdf = "%PDF-1.4\n";
+    const offsets = [0];
+    for (let i = 0; i < objects.length; i++) {
+      offsets.push(pdf.length);
+      pdf += `${i + 1} 0 obj\n${objects[i]}\nendobj\n`;
+    }
+
+    const xrefOffset = pdf.length;
+    pdf += `xref\n0 ${objects.length + 1}\n`;
+    pdf += "0000000000 65535 f \n";
+    for (let i = 1; i <= objects.length; i++) {
+      pdf += `${String(offsets[i]).padStart(10, "0")} 00000 n \n`;
+    }
+    pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+
+    return new Blob([pdf], { type: "application/pdf" });
+  }
+
+  // === 7. EXPORT-AKTIONEN FÜR GOODNOTES ===
+  document.getElementById("btnDownloadPDF").addEventListener("click", () => {
+    const blob = buildVectorPDF(renderedPagesData);
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "handschrift-goodnotes.pdf";
+    a.click();
+    showToast("Vektor-PDF heruntergeladen!");
+  });
+
+  document.getElementById("btnSharePDF").addEventListener("click", async () => {
+    const blob = buildVectorPDF(renderedPagesData);
+    const file = new File([blob], "handschrift-goodnotes.pdf", { type: "application/pdf" });
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: "Handschrift für GoodNotes"
+        });
+        return;
+      } catch (err) {
+        if (err.name === "AbortError") return;
+      }
+    }
+    // Fallback Download
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "handschrift-goodnotes.pdf";
+    a.click();
+    showToast("PDF geladen – über 'Teilen → In GoodNotes öffnen' importieren!");
+  });
+
+  document.getElementById("btnCopyPNG").addEventListener("click", async () => {
+    const firstCanvas = pagesContainer.querySelector("canvas");
+    if (!firstCanvas) return;
+    try {
+      const blobPromise = new Promise(resolve => firstCanvas.toBlob(resolve, "image/png"));
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": blobPromise })]);
+      showToast("PNG kopiert! In GoodNotes einfach 'Einsetzen' wählen.");
+    } catch {
+      showToast("Zwischenablage blockiert – bitte 'PNG laden' verwenden.");
+    }
+  });
+
+  document.getElementById("btnDownloadPNG").addEventListener("click", () => {
+    const canvases = pagesContainer.querySelectorAll("canvas");
+    canvases.forEach((c, idx) => {
+      const a = document.createElement("a");
+      a.href = c.toDataURL("image/png");
+      a.download = canvases.length > 1 ? `handschrift-seite-${idx + 1}.png` : "handschrift.png";
+      a.click();
+    });
+    showToast("PNG heruntergeladen!");
+  });
+
+  // Initialisierung
+  updateProgress();
+  renderGrid();
+  renderDrawCanvas();
+})();
+</script>
+</body>
+</html>
